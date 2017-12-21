@@ -20,24 +20,24 @@ import argparse
 import os
 import sys
 
-# Allow relative imports when being executed as script.
-if __name__ == "__main__" and __package__ is None:
-    __package__ = "keras_retinanet.bin"
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-
 import keras
 import keras.preprocessing.image
 from keras.utils import multi_gpu_model
-
 import tensorflow as tf
 
+# Allow relative imports when being executed as script.
+if __name__ == "__main__" and __package__ is None:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+    import keras_retinanet.bin
+    __package__ = "keras_retinanet.bin"
+
+# Change these to absolute imports if you copy this script outside the keras_retinanet package.
 from .. import losses
 from .. import layers
 from ..callbacks import RedirectModel
 from ..preprocessing.pascal_voc import PascalVocGenerator
 from ..preprocessing.csv_generator import CSVGenerator
 from ..models.resnet import ResNet50RetinaNet
-from ..utils.transform import random_transform_generator
 from ..utils.keras_version import check_keras_version
 
 
@@ -110,8 +110,11 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
 
 def create_generators(args):
-    # create random transform generator for augmenting training data
-    transform_generator = random_transform_generator(flip_x_chance=0.5)
+    # create image data generator objects
+    train_image_data_generator = keras.preprocessing.image.ImageDataGenerator(
+        horizontal_flip=True,
+    )
+    val_image_data_generator = keras.preprocessing.image.ImageDataGenerator()
 
     if args.dataset_type == 'coco':
         # import here to prevent unnecessary dependency on cocoapi
@@ -120,33 +123,35 @@ def create_generators(args):
         train_generator = CocoGenerator(
             args.coco_path,
             'train2017',
-            transform_generator=transform_generator,
+            train_image_data_generator,
             batch_size=args.batch_size
         )
 
         validation_generator = CocoGenerator(
             args.coco_path,
             'val2017',
+            val_image_data_generator,
             batch_size=args.batch_size
         )
     elif args.dataset_type == 'pascal':
         train_generator = PascalVocGenerator(
             args.pascal_path,
             'trainval',
-            transform_generator=transform_generator,
+            train_image_data_generator,
             batch_size=args.batch_size
         )
 
         validation_generator = PascalVocGenerator(
             args.pascal_path,
             'test',
+            val_image_data_generator,
             batch_size=args.batch_size
         )
     elif args.dataset_type == 'csv':
         train_generator = CSVGenerator(
             args.annotations,
             args.classes,
-            transform_generator=transform_generator,
+            train_image_data_generator,
             batch_size=args.batch_size
         )
 
@@ -154,12 +159,13 @@ def create_generators(args):
             validation_generator = CSVGenerator(
                 args.val_annotations,
                 args.classes,
+                val_image_data_generator,
                 batch_size=args.batch_size
             )
         else:
             validation_generator = None
     else:
-        raise ValueError('Invalid data type received: {}'.format(dataset_type))
+        raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
     return train_generator, validation_generator
 
