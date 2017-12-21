@@ -71,7 +71,7 @@ def anchors_for_shape(
     sizes=None
 ):
     if pyramid_levels is None:
-        pyramid_levels = [2, 3, 4, 5, 6]
+        pyramid_levels = [2, 3, 4, 5, 6, 7]
     if strides is None:
         strides = [2 ** x for x in pyramid_levels]
     if sizes is None:
@@ -120,7 +120,7 @@ def shift(shape, stride, anchors):
     return all_anchors
 
 
-def generate_anchors(base_size=16, ratios=None, scales=None):
+def generate_anchors(base_size=8, ratios=None, scales=None):
     """
     Generate anchor (reference) windows by enumerating aspect ratios X
     scales w.r.t. a reference window.
